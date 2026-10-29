@@ -1,6 +1,4 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
 from app.api import execution_router, workflow_router
 from app.errors.handlers import register_exception_handlers
 

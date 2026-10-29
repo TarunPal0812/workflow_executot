@@ -1,8 +1,10 @@
 import time
 from typing import Any, Optional
 
+from app.services.openai_service import classify_text
 
-def run_step(step: dict[str, Any], value: str) -> str:
+
+async def run_step(step: dict[str, Any], value: str) -> str:
     kind = step.get("type")
 
     if kind == "text_transform":
@@ -76,10 +78,18 @@ def run_step(step: dict[str, Any], value: str) -> str:
             return str(int(result))
         return f"{result:.6f}".rstrip("0").rstrip(".")
 
+    if kind in ("ai_classify", "ai_text_classification"):
+        categories = step.get("categories") or [
+            "positive",
+            "negative",
+            "neutral",
+        ]
+        return await classify_text(value, categories)
+
     raise ValueError(f"Unknown step type: '{kind}'")
 
 
-def execute_workflow(
+async def execute_workflow(
     steps: list[dict[str, Any]],
     initial_input: str,
     start: int = 0,
@@ -103,7 +113,7 @@ def execute_workflow(
         start_time = time.perf_counter()
 
         try:
-            output_val = run_step(step, current_value)
+            output_val = await run_step(step, current_value)
             duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
             results.append(
                 {

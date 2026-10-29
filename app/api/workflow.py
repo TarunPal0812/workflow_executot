@@ -6,6 +6,8 @@ from app.schemas.general_response_schema import SuccessResponse
 from app.schemas.workflow_schem import (
     ExecuteRequest,
     ExecutionOut,
+    GenerateWorkflowRequest,
+    GenerateWorkflowResponse,
     WorkflowCreate,
     WorkflowOut,
     WorkflowUpdate,
@@ -45,6 +47,25 @@ async def list_workflows(
         data=workflows,
         message="Workflows fetched successfully",
         meta={"skip": skip, "limit": limit, "count": len(workflows)},
+    )
+
+
+@router.post(
+    "/generate",
+    response_model=SuccessResponse[GenerateWorkflowResponse],
+)
+async def generate_workflow(
+    body: GenerateWorkflowRequest,
+    service: WorkflowServiceDependency,
+):
+    result = await service.generate_workflow(
+        description=body.description,
+        custom_name=body.name,
+        save=body.save,
+    )
+    return success_response(
+        data=result,
+        message="Workflow generated successfully with OpenAI",
     )
 
 

@@ -39,8 +39,15 @@ class ArithmeticStep(BaseModel):
     operand: float
 
 
+class AIClassifyStep(BaseModel):
+    type: Literal["ai_classify", "ai_text_classification"] = "ai_classify"
+    categories: list[str] = Field(
+        default_factory=lambda: ["positive", "negative", "neutral"]
+    )
+
+
 Step = Annotated[
-    Union[TextTransformStep, ArithmeticStep],
+    Union[TextTransformStep, ArithmeticStep, AIClassifyStep],
     Field(discriminator="type"),
 ]
 
@@ -101,3 +108,16 @@ class WorkflowOut(BaseModel):
     steps: list[dict]
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+
+class GenerateWorkflowRequest(BaseModel):
+    description: str = Field(..., min_length=3)
+    name: Optional[str] = None
+    save: bool = False
+
+
+class GenerateWorkflowResponse(BaseModel):
+    name: str
+    description: str
+    steps: list[dict]
+    saved_workflow: Optional[WorkflowOut] = None

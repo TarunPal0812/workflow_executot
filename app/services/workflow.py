@@ -4,6 +4,7 @@ from typing import Optional
 from app.models.workflows import Execution, Workflow
 from app.repositories.execution import ExecutionRepository
 from app.repositories.workflow import WorkflowRepository
+from app.services.openai_service import generate_workflow as generate_workflow_ai
 from app.services.workflow_engine import execute_workflow
 
 
@@ -63,9 +64,11 @@ class WorkflowService:
 
         exec_record = await self.exec_repo.create(workflow_id, initial_input)
 
-        exec_status, final_output, error_msg, step_results = execute_workflow(
-            steps=wf.steps,
-            initial_input=initial_input,
+        exec_status, final_output, error_msg, step_results = (
+            await execute_workflow(
+                steps=wf.steps,
+                initial_input=initial_input,
+            )
         )
 
         exec_record.status = exec_status
@@ -97,11 +100,13 @@ class WorkflowService:
                     previous_results = execution.step_result[:idx]
                     break
 
-        exec_status, final_output, error_msg, step_results = execute_workflow(
-            steps=wf.steps,
-            initial_input=execution.input,
-            start=start_step,
-            previous_results=previous_results,
+        exec_status, final_output, error_msg, step_results = (
+            await execute_workflow(
+                steps=wf.steps,
+                initial_input=execution.input,
+                start=start_step,
+                previous_results=previous_results,
+            )
         )
 
         execution.retry_count += 1
@@ -124,3 +129,26 @@ class WorkflowService:
         limit: int = 50,
     ) -> list[Execution]:
         return await self.exec_repo.list_all(workflow_id, status, skip, limit)
+
+    async def generate_workflow(
+        self,
+        description: str,
+        custom_name: Optional[str] = None,
+        save: bool = False,
+    ) -> dict:
+        generated = await generate_workflow_ai(
+            description, custom_name
+        )
+        saved_wf = None
+        if save:
+            saved_wf = await self.create_workflow(
+                name=generated["name"],
+                description=generated["description"],
+                steps=generated["steps"],
+            )
+        return {
+            "name": generated["name"],
+            "description": generated["description"],
+            "steps": generated["steps"],
+            "saved_workflow": saved_wf,
+        }
